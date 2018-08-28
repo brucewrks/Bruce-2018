@@ -4,8 +4,11 @@
   "description": "Public and Private Key Message Signing",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "generate": "cd keys && ssh-keygen -b 2048 -t rsa -f test && openssl rsa -in test -pubout -outform PEM -out test.pub && cd ..",
+    "send-key": "node client.js send-key",
+    "sign": "node client.js sign",
+    "verify": "node client.js verify"
   },
   "repository": {
     "type": "git",

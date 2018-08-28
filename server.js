@@ -1,10 +1,10 @@
-const express = require('express');
-const crypto  = require('crypto');
+const express    = require('express');
+const crypto     = require('crypto');
 const bodyParser = require('body-parser');
 
 const app  = express();
 const port = process.env.PORT || 1337;
-const salt = 'some-salt-key'; // TODO: Salt should be retrieved via environment variable
+const salt = process.env.SALT || 'sample-salt-string';
 
 // Using bodyParser to save myself from 50 extra lines of code
 app.use(bodyParser.json());
@@ -16,9 +16,10 @@ if(process.argv.length < 3) { // We take the password via argument
 
 /* === Generating Password Hash === */
 
+// NOTE: We're storing this in memory just because this is example code.
 const password = crypto.createHash('sha256')
-                       .update(process.argv.slice(2).join(' ') + salt)
-                       .digest('base64'); // NOTE: We're storing this in memory just because this is example code.
+                       .update(process.argv[2] + salt)
+                       .digest('base64');
 
 /**
  * Verifies that password passed (in plain text) matches the password provided
@@ -48,12 +49,26 @@ function stopBadPass(res) {
 
 /* === Public Key Verification Stuff === */
 
-const pubKey = '';
+let pubKey = '';
 
+/**
+ * Determines whether or not a message has been signed with the private key
+ * related to the set public key.
+ *
+ * @param String mes  The message to validate
+ * @param String sign The signature related to this message
+ *
+ * @return Boolean
+ */
 function isSignedMessage(mes, sign) {
-  return crypto.createVerify('sha256')
-               .update(mes)
-               .verify(pubKey, sign, 'base64');
+  try {
+    return crypto.createVerify('sha256')
+                 .update(mes)
+                 .verify(pubKey, sign, 'base64');
+  } catch(e) {
+    console.log('!!ERROR: It looks like an invalid Public Key has been provided.!!');
+    return false;
+  }
 }
 
 /* === Server Requests === */
@@ -67,12 +82,12 @@ function isSignedMessage(mes, sign) {
  */
 app.post('/', (req, res) => {
 
-  if(!res.body || !res.body.message || !res.body.signature) {
+  if(!req.body || !req.body.message || !req.body.signature || !pubKey) {
     return res.send(JSON.stringify({ verify: false }));
   }
 
-  let message = res.body.message.toString();
-  let signature = res.body.signature.toString();
+  let message = req.body.message.toString();
+  let signature = req.body.signature.toString();
 
   let verify = isSignedMessage(message, signature);
   res.send(JSON.stringify({ verify }));
@@ -87,12 +102,20 @@ app.post('/', (req, res) => {
 app.post('/set-public-key', (req, res) => {
   if(!req.query.pass || !passValid(req.query.pass)) return stopBadPass(res);
 
-  if(!res.body || !res.body.key) {
+  if(!req.body || !req.body.key) {
     return res.send(JSON.stringify({ success: false }));
   }
 
-  pubKey = res.body.key;
+  console.log('Setting server public key.');
+
+  pubKey = req.body.key;
+
+  if(!pubKey.match(/^\-\-/)) {
+    console.log('Input public key does not include header and footer. Appending now.');
+    pubKey = '-----BEGIN PUBLIC KEY-----\n' + pubKey + '\n-----END PUBLIC KEY-----';
+  }
+
   res.send(JSON.stringify({ success: true }));
 });
 
-app.listen(port, () => console.log('Listening on port ' + port));
+app.listen(port, () => console.log('Server listening on port ' + port));
