@@ -82,6 +82,8 @@ function isSignedMessage(mes, sign) {
  */
 app.post('/', (req, res) => {
 
+  res.setHeader('Content-Type', 'application/json');
+
   if(!req.body || !req.body.message || !req.body.signature || !pubKey) {
     return res.send(JSON.stringify({ verify: false }));
   }
@@ -101,6 +103,8 @@ app.post('/', (req, res) => {
  */
 app.post('/set-public-key', (req, res) => {
   if(!req.query.pass || !passValid(req.query.pass)) return stopBadPass(res);
+
+  res.setHeader('Content-Type', 'application/json');
 
   if(!req.body || !req.body.key) {
     return res.send(JSON.stringify({ success: false }));
