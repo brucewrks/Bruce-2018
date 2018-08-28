@@ -67,6 +67,7 @@ function isSignedMessage(mes, sign) {
                  .verify(pubKey, sign, 'base64');
   } catch(e) {
     console.log('!!ERROR: It looks like an invalid Public Key has been provided.!!');
+    console.log(e);
     return false;
   }
 }
